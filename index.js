@@ -64,7 +64,6 @@ module.exports = function GridFSStore (globalOpts) {
         },
 
         read: function(fd, cb) {
-          console.log('GridFs.options',globalOpts);
             MongoClient.connect(globalOpts.uri, {native_parser:true}, function(err, db) {
                 GridStore.exist(db, fd, globalOpts.bucket, function(err, exists) {
                     if (err) {
@@ -176,45 +175,50 @@ module.exports = function GridFSStore (globalOpts) {
             // into this receiver.  (filename === `__newFile.filename`).
             receiver__._write = function onFile(__newFile, encoding, done) {
                 console.log('write fd:',__newFile.fd);
-                var fd = __newFile.fd;
+                var fd = __newFile.fd,
+                    closed = false;
 
                 MongoClient.connect(globalOpts.uri, {native_parser:true}, function(err, db) {
                     if (err) return done(err);
 
                     receiver__.once('error', function (err) {
-                        db.close();
-                        console.log('ERROR ON RECEIVER__ ::',err);
-                        done(err);
+                      if(closed) return;
+                      closed = true;
+                      db.close();
+                      console.log('ERROR ON RECEIVER__ ::',err);
+                      done(err);
                     });
 
                     var gfs = Grid(db, mongo);
                     console.log('Opened connection for (%s)',fd);
 
                     var outs = gfs.createWriteStream({
-                        filename: fd,
-                        root: options.bucket,
-                        metadata: {
-                            fd: fd,
-                            dirname: __newFile.dirname || path.dirname(fd)
-                        }
+                      filename: fd,
+                      root: options.bucket,
+                      metadata: {
+                        fd: fd,
+                        dirname: __newFile.dirname || path.dirname(fd)
+                      }
                     });
                     __newFile.once('error', function (err) {
-                        receiver__.emit('error', err);
-                        console.log('***** READ error on file ' + __newFile.filename, '::', err);
+                      receiver__.emit('error', err);
+                      console.log('***** READ error on file ' + __newFile.filename, '::', err);
                     });
                     outs.once('error', function failedToWriteFile(err) {
-                        receiver__.emit('error', err);
-                        console.log('Error on file output stream- garbage collecting unfinished uploads...');
+                      receiver__.emit('error', err);
+                      console.log('Error on file output stream- garbage collecting unfinished uploads...');
                     });
                     outs.once('open', function openedWriteStream() {
-                        console.log('opened output stream for',__newFile.fd);
-                        __newFile.extra = _.assign({fileId: this.id}, this.options.metadata);
+                      console.log('opened output stream for',__newFile.fd);
+                      __newFile.extra = _.assign({fileId: this.id}, this.options.metadata);
                     });
                     outs.once('close', function doneWritingFile(file) {
-                        console.log('closed output stream for',__newFile.fd);
-                        //mongoose.disconnect();
-                        db.close();
-                        done();
+                      console.log('closed output stream for',__newFile.fd);
+                      //mongoose.disconnect();
+                      if(closed) return;
+                      closed = true;
+                      db.close();
+                      done();
                     });
                     __newFile.pipe(outs);
                 });
