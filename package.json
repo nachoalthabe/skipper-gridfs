@@ -17,14 +17,10 @@
     "mongodb",
     "upload"
   ],
-<<<<<<< HEAD
   "author": {
     "name": "Will Huang",
     "email": "willhuang85@gmail.com"
   },
-=======
-  "author": "Will Huang <willhuang85@gmail.com>",
->>>>>>> ba0dfb3ca1b53e9607aab0e32cd792a100a470d4
   "license": "MIT",
   "bugs": {
     "url": "https://github.com/willhuang85/skipper-gridfs/issues"
