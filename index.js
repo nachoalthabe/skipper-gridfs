@@ -178,9 +178,11 @@ module.exports = function GridFSStore (globalOpts) {
                 var fd = __newFile.fd,
                     closed = false;
 
+
                 console.log(globalOpts.uri);
                 MongoClient.connect(globalOpts.uri, {native_parser:true}, function(err, db) {
                     console.log('Conecto');
+
                     if (err) return done(err);
 
                     receiver__.once('error', function (err) {
